@@ -1,2 +1,10 @@
 ---
-# defaults file for ansible-oracle-db-upgrade
+# Default values for the 3 upgrade Steps
+# override these values by passing them in using --extra-vars
+pre_upgrade: false
+upgrade: false
+upgrade_tzv: false
+upgrade_final: false
+
+#Shared directory for ansible to store files used by playbooks
+oracle_stage_base: /u01/oracle/ansible_stage

@@ -1,0 +1,18 @@
+--DROP RESTORE POINT before_upgrade;
+DROP RESTORE POINT before_upgrade;
+
+--Set Compatible Parameter
+alter system set compatible='{{ oracle_version }}' scope=spfile;
+shutdown immediate;
+
+{% if database_parameters[db_name].log_mode == 'noarchivelog' %}
+startup mount;
+alter database flashback off;
+alter database noarchivelog;
+alter database open;
+{% else %}
+startup;
+{% endif %}
+
+--Gather Fixed Object Stats
+exec DBMS_STATS.GATHER_FIXED_OBJECTS_STATS;

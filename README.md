@@ -1,38 +1,59 @@
 Role Name
 =========
 
-A brief description of the role goes here.
+Upgrade an Oracle database.  Role is is divided into 3 sections that should be run in this order:
 
-Requirements
-------------
+1. pre_upgrade.yml (no downtime if database is in archivelog mode)
+ - run 24 hrs before planned database upgrade
+ - runs pre-upgrade oracle script, performs full (level 0) backup, runs fixup scripts.
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+2. upgrade.yml (Downtime is required!)
+ - performs incremental (level 1) backup, enables flashback database and creates guaranteed restore point.  Runs manual database upgrade.  Takes another full backup after upgrade is complete.
+
+3. upgrade_final.yml (no downtime if database is in archivelog mode)
+ - run 7 days after upgrade to finalize
+ - deletes guaranteed restore point before setting database compatibility parameter.  Takes full backup (level 0).
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Expected Variables:
+from playbook:
+ db_name: name of database to be upgraded
 
-Dependencies
-------------
+Databsase must be defined in dict variable "database_parameters".  All items listed are required in this role.
+database_parameters:
+  <db_name>:
+    db_version: # 12.1.0.2, 11.2.0.4
+    sga_target: 1G
+    pga_aggregate_target: 1G
+    redolog_size_mb: 75
+    db_recovery_file_dest_size: #size of fra, 10G
+    log_mode: # archivelog, noarchivelog
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+defaults/main.yml
+  pre_upgrade: false    # set to true to run pre-upgrade tasks
+  upgrade: false        # set to true to upgrade database
+  upgrade_final: false  # set to true to run final upgrade tasks
+
+vars/main.yml
+oracle_version: version to upgrade to (12.1.0.2)
+oracle_home: new oracle home
+env: environment variables to set for upgraded database
+
+oracle_version_old: current version of the database (11.2.0.4)
+oracle_home_old: current oracle home
+env_old:  environment variables for current database (before upgrade)
+
 
 Example Playbook
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+    - hosts: oracle
+      sudo: true
+      sudo_user: oracle
+      vars:
+        db_name: test
 
-    - hosts: servers
       roles:
-         - { role: username.rolename, x: 42 }
-
-License
--------
-
-BSD
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+        - role: db-upgrade

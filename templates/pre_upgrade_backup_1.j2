@@ -1,0 +1,15 @@
+connect target /
+spool log to {{ oracle_stage }}/{{ db_name }}_upgrade/pre_upgrade_backup.log
+run
+{
+allocate channel backup_disk1 type disk;
+allocate channel backup_disk2 type disk;
+allocate channel backup_disk3 type disk;
+allocate channel backup_disk4 type disk;
+backup incremental level 1 cumulative as COMPRESSED BACKUPSET tag 'before_upgrade_inc' database;
+backup current controlfile tag 'before_upgrade_inc';
+release channel backup_disk1;
+release channel backup_disk2;
+release channel backup_disk3;
+release channel backup_disk4;
+}

@@ -1,0 +1,7 @@
+set linesize 1000;
+spool {{ oracle_stage }}/{{ db_name }}_upgrade/enable_archivelog.log
+
+alter database archivelog;
+alter database flashback on;
+
+alter database open;

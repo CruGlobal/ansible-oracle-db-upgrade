@@ -1,0 +1,11 @@
+sqlplus -s / as sysdba  << _EOF
+set feedback off;
+set escape on
+set heading off;
+set newpage none;
+SET TRIMOUT ON;
+SET TRIMSPOOL ON;
+spool {{ oracle_stage }}/db_unique_name.log
+select trim(value) from v\$parameter where name='db_unique_name';
+spool off;
+_EOF

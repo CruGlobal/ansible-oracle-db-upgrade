@@ -1,0 +1,9 @@
+set linesize 1000;
+spool {{ oracle_stage }}/{{ db_name }}_upgrade/enable_flashback_database.log
+
+alter database archivelog;
+alter database flashback on;
+CREATE RESTORE POINT before_upgrade GUARANTEE FLASHBACK DATABASE;
+SELECT NAME, SCN, TIME, DATABASE_INCARNATION#,
+        GUARANTEE_FLASHBACK_DATABASE,STORAGE_SIZE
+        FROM V$RESTORE_POINT;

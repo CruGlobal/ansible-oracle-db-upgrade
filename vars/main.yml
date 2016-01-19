@@ -1,2 +1,21 @@
 ---
-# vars file for ansible-oracle-db-upgrade
+# Variables for db-upgrade ansible role
+oracle_stage: "{{ oracle_stage_base }}/12c_upgrade/{{ db_name }}"
+
+oracle_version: 12.1.0.2
+oracle_home: "/app/oracle/{{ oracle_version }}/dbhome_1"
+env:
+  ORACLE_HOME: "{{ oracle_home }}"
+  ORACLE_BASE: "{{ oracle_base }}"
+  ORACLE_SID: "{{ db_name }}"
+  TNS_ADMIN: "{{ tns_admin }}"
+  PATH: "{{ oracle_home }}/bin:{{ oracle_home }}/OPatch:$PATH:/bin:/usr/bin::/usr/ccs/bin"
+
+oracle_version_old: 11.2.0.4
+oracle_home_old: "/app/oracle/{{ oracle_version_old }}/dbhome_1"
+env_old:
+  ORACLE_HOME: "{{ oracle_home_old }}"
+  ORACLE_BASE: "{{ oracle_base }}"
+  ORACLE_SID: "{{ db_name }}"
+  TNS_ADMIN: "{{ tns_admin }}"
+  PATH: "{{ oracle_home_old }}/bin:{{ oracle_home_old }}/OPatch:$PATH:/bin:/usr/bin::/usr/ccs/bin"

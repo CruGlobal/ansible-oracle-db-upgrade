@@ -1,0 +1,88 @@
+---
+
+- name: template enable_archivelog (noarchivelog)
+  template:
+    src: enable_archivelog.j2
+    dest: "{{ oracle_stage }}/enable_archivelog.sql"
+  when: database_parameters[db_name].log_mode == 'noarchivelog'
+  tags: archivelog
+
+- name: Shutdown database immediate (noarchivelog)
+  shell: echo "shutdown immediate;" | sqlplus / as sysdba
+  environment: env_old
+  when: database_parameters[db_name].log_mode == 'noarchivelog'
+  tags:
+    - archivelog
+
+- name: Startup Mount (noarchivelog)
+  shell: echo "startup mount;" | sqlplus / as sysdba
+  environment: env_old
+  when: database_parameters[db_name].log_mode == 'noarchivelog'
+  tags:
+    - archivelog
+
+- name: Run enable_archivelog.sql
+  shell: echo exit | sqlplus / as sysdba @enable_archivelog.sql
+  args:
+    chdir: "{{ oracle_stage }}"
+  environment:
+    ORACLE_HOME: "{{ oracle_home_old }}"
+    ORACLE_SID: "{{ db_name }}"
+    PATH: "{{ oracle_home_old }}/bin"
+  when: database_parameters[db_name].log_mode == 'noarchivelog'
+  tags: archivelog
+
+## Backup Database
+- name: template backup script (level 0)
+  template:
+    src: pre_upgrade_backup_0.j2
+    dest: "{{ oracle_stage }}/pre_upgrade_backup_0.rman"
+  tags: pre_upgrade_backup
+
+- name: backup database (level 0)
+  shell: rman @{{ oracle_stage }}/pre_upgrade_backup_0.rman
+  environment:
+    ORACLE_HOME: "{{ oracle_home_old }}"
+    ORACLE_SID: "{{ db_name }}"
+    PATH: "{{ oracle_home_old }}/bin"
+    NLS_DATE_FORMAT: 'Mon DD YYYY HH24:MI:SS'
+  async: 7200
+  poll: 10
+  tags: pre_upgrade_backup
+
+- name: run preupgrade.sql
+  shell: echo exit | sqlplus / as sysdba @preupgrd.sql
+  args:
+    chdir: "{{ oracle_home }}/rdbms/admin"
+  register: preupgrd
+  environment: env_old
+  tags: preupgrade_script
+
+- debug: var=preupgrd
+  tags: preupgrade_script
+
+# - name: copy preupgrd output to oracle_stage
+#   copy: content="{{ preupgrd.stdout }}" dest="{{ oracle_stage }}/preupgrade.log"
+
+- name: run preupgrade_fixups.sql
+  shell: echo exit | sqlplus / as sysdba @preupgrade_fixups.sql
+  args:
+    chdir: "{{ oracle_base }}/cfgtoollogs/{{ db_unique_name }}/preupgrade/"
+  register: fixups
+  environment: env_old
+
+- debug: var=fixups.stdout_lines
+
+- name: copy fixups output to oracle_stage
+  copy: content="{{ fixups.stdout }}" dest="{{ oracle_stage }}/preupgrade_fixups.log"
+
+- name: tempalate pre_upgrade_tasks.sql
+  template:
+    src: pre_upgrade_tasks.j2
+    dest: "{{ oracle_stage }}/pre_upgrade_tasks.sql"
+
+- name: run pre_upgrade_tasks.sql
+  shell: echo exit | sqlplus / as sysdba @pre_upgrade_tasks.sql
+  args:
+    chdir: "{{ oracle_stage }}"
+  environment: env_old

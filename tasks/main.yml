@@ -1,2 +1,52 @@
 ---
-# tasks file for ansible-oracle-db-upgrade
+- name: Create upgrade stage directory
+  file:
+    path: "{{ oracle_stage }}"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    state: directory
+
+- name: Template db_unique_name.sql
+  template:
+    src: db_unique_name.j2
+    dest: "{{ oracle_stage }}/db_unique_name.sh"
+    mode: 0744
+  tags: always
+
+- name: Run db_unique_name.sql
+  shell: ./db_unique_name.sh
+  args:
+    chdir: "{{ oracle_stage }}"
+  environment: env_old
+  register: db_unique_name_out
+  tags: always
+
+- name: Set db_unique_name variable
+  set_fact:
+    db_unique_name: "{{ db_unique_name_out.stdout_lines[3] }}"
+  tags: always
+
+
+#Run pre-upgrade tasks one day before upgrade
+- name: run pre-upgrade tasks
+  include: pre_upgrade.yml
+  when: pre_upgrade
+  tags: pre_upgrade
+
+#Upgrade database to 12.1.0.2
+- name: upgrade database
+  include: upgrade.yml
+  when: upgrade
+  tags: upgrade
+
+#Upgrade Timezone
+- name: upgrade timezone
+  include: upgrade_tzv.yml
+  when: upgrade_tzv
+  tags: upgrade_tzv
+
+#Run final upgrade tasks 1 week after upgrading database
+- name: final upgrade tasks
+  include: upgrade_final.yml
+  when: upgrade_final
+  tags: upgrade_final
