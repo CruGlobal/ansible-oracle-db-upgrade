@@ -21,9 +21,11 @@
   register: db_unique_name_out
   tags: always
 
+- debug: var=db_unique_name_out.stdout_lines[0]
+
 - name: Set db_unique_name variable
   set_fact:
-    db_unique_name: "{{ db_unique_name_out.stdout_lines[3] }}"
+    db_unique_name: "{{ db_unique_name_out.stdout_lines[0] }}"
   tags: always
 
 

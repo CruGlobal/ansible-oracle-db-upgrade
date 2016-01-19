@@ -1,5 +1,5 @@
 set linesize 1000;
-spool {{ oracle_stage }}/{{ db_name }}_upgrade/post_upgrade_tasks.log
+spool {{ oracle_stage }}/post_upgrade_tasks.log
 
 PROMP Gather Optimizer Statistics
 EXECUTE dbms_stats.gather_dictionary_stats;

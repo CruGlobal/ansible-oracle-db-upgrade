@@ -85,6 +85,12 @@
 
 - debug: var=postupgrade_fixups.stdout_lines
 
+- name: Run catuppst.sql to complete the upgrade process
+  shell: echo exit | sqlplus / as sysdba @catuppst
+  args:
+    chdir: "{{ oracle_home }}/rdbms/admin"
+  environment: env
+
 - name: Recompile invalid objects
   shell: echo exit | sqlplus / as sysdba @utlprp
   args:
@@ -128,4 +134,10 @@
   shell: echo exit | sqlplus / as sysdba @post_upgrade_tasks.sql
   args:
     chdir: "{{ oracle_stage }}"
+  environment: env
+
+- name: Recompile invalid objects
+  shell: echo exit | sqlplus / as sysdba @utlprp
+  args:
+    chdir: "{{ oracle_home }}/rdbms/admin"
   environment: env
