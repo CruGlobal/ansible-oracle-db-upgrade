@@ -21,7 +21,7 @@ Expected Variables:
 from playbook:
  db_name: name of database to be upgraded
 
-Databsase must be defined in dict variable "database_parameters".  All items listed are required in this role.
+Database must be defined in dict variable "database_parameters".  All items listed are required in this role.
 database_parameters:
   <db_name>:
     db_version: # 12.1.0.2, 11.2.0.4
