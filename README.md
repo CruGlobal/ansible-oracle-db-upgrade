@@ -57,3 +57,11 @@ Example Playbook
 
       roles:
         - role: db-upgrade
+
+### Optional Tags
+
+`pre_upgrade_backup` - Level 0 backup that runs during pre-upgrade checks.  If this is skipped do not run subsequent Level 1 backups.
+
+`backup` - Level 1 backup that runs before database upgrade.
+
+`final_upgrade_backup` - Level 0 backup that runs during final upgrade tasks.
