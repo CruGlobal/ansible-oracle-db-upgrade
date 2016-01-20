@@ -1,5 +1,5 @@
 connect target /
-spool log to {{ oracle_stage }}/{{ db_name }}_upgrade/final_upgrade_backup.log
+spool log to {{ oracle_stage }}/final_upgrade_backup.log
 run
 {
 allocate channel backup_disk1 type disk;

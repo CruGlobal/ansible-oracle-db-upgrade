@@ -1,8 +1,8 @@
 set linesize 1000;
-spool {{ oracle_stage }}/{{ db_name }}_upgrade/pre_upgrade_tasks.log
+spool {{ oracle_stage }}/pre_upgrade_tasks.log
 
 PROMP Create pfile from spfile
-create pfile='{{ oracle_stage }}/{{ db_name }}_upgrade/{{ db_name }}_pfile.ora' from spfile;
+create pfile='{{ oracle_stage }}/{{ db_name }}_pfile.ora' from spfile;
 
 PROMP Recompile any invalid objects
 @{{ oracle_home_old }}/rdbms/admin/utlrp.sql
