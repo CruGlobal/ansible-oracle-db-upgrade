@@ -89,7 +89,14 @@
   shell: echo exit | sqlplus / as sysdba @catuppst
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
+  register: catuppst
   environment: env
+
+- name: Show output of catuppst.sql
+  debug: var=catuppst.stdout_lines
+
+- name: copy utlu121s output to oracle_stage
+  copy: content="{{ catuppst.stdout }}" dest="{{ oracle_stage }}/catuppst.log"
 
 - name: Recompile invalid objects
   shell: echo exit | sqlplus / as sysdba @utlprp
