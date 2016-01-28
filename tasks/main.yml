@@ -17,7 +17,7 @@
   shell: ./db_unique_name.sh
   args:
     chdir: "{{ oracle_stage }}"
-  environment: env_old
+  environment: "{{ env_old }}"
   register: db_unique_name_out
   tags: always
 

@@ -15,7 +15,7 @@
   args:
     chdir: "{{ oracle_stage }}"
   register: tzv_check
-  environment: env
+  environment: "{{ env }}"
 
 - debug: var=tzv_check
 
@@ -24,6 +24,6 @@
   args:
     chdir: "{{ oracle_stage }}"
   register: tzv_apply
-  environment: env
+  environment: "{{ env }}"
 
 - debug: var=tzv_apply

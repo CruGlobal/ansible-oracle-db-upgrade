@@ -10,7 +10,7 @@
   shell: echo exit | sqlplus / as sysdba @enable_flashback_database.sql
   args:
     chdir: "{{ oracle_stage }}"
-  environment:
+  environment: "{{ env }}"
     ORACLE_HOME: "{{ oracle_home_old }}"
     ORACLE_SID: "{{ db_name }}"
     PATH: "{{ oracle_home_old }}/bin"
@@ -28,7 +28,7 @@
 
 - name: backup database (level 1)
   shell: rman @{{ oracle_stage }}/pre_upgrade_backup_1.rman
-  environment:
+  environment: "{{ env }}"
     ORACLE_HOME: "{{ oracle_home_old }}"
     ORACLE_SID: "{{ db_name }}"
     PATH: "{{ oracle_home_old }}/bin"
@@ -39,7 +39,7 @@
 
 - name: shutdown database immediate
   shell: echo "shutdown immediate;" | sqlplus / as sysdba
-  environment: env_old
+  environment: "{{ env_old }}"
 
 #update db to run out of new home
 - name: update oratab with new database home
@@ -60,11 +60,11 @@
 
 - name: startup upgrade
   shell: echo "startup upgrade;" | sqlplus / as sysdba
-  environment: env
+  environment: "{{ env }}"
 
 - name: run catupgrd.sql (log files in oracle_stage/<db_name>_upgrade/)
   shell: "cd {{ oracle_home }}/rdbms/admin; {{ oracle_home }}/perl/bin/perl catctl.pl -l {{ oracle_stage }} catupgrd.sql"
-  environment: env
+  environment: "{{ env }}"
   async: 10800  # 3 hrs
   poll: 30
 
@@ -74,14 +74,14 @@
 
 - name: Startup Database
   shell: echo "startup;" | sqlplus / as sysdba
-  environment: env
+  environment: "{{ env }}"
 
 - name: Run postupgrade_fixups.sql
   shell: echo exit | sqlplus / as sysdba @postupgrade_fixups.sql
   args:
     chdir: "{{ oracle_base }}/cfgtoollogs/{{ db_unique_name }}/preupgrade/"
   register: postupgrade_fixups
-  environment: env
+  environment: "{{ env }}"
 
 - debug: var=postupgrade_fixups.stdout_lines
 
@@ -90,7 +90,7 @@
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
   register: catuppst
-  environment: env
+  environment: "{{ env }}"
 
 - name: Show output of catuppst.sql
   debug: var=catuppst.stdout_lines
@@ -102,29 +102,17 @@
   shell: echo exit | sqlplus / as sysdba @utlprp
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
-  environment: env
+  environment: "{{ env }}"
 
 # - name: copy postupgrade_fixups output to oracle_stage
 #   copy: content="{{ postupgrade_fixups.stdout }}" dest="{{ oracle_stage }}/postupgrade_fixups.log"
-
-- name: Upgrade status check (utlu121s.sql)
-  shell: echo exit | sqlplus / as sysdba @utlu121s
-  args:
-    chdir: "{{ oracle_home }}/rdbms/admin"
-  register: utlu121s
-  environment: env
-
-- debug: var=utlu121s.stdout_lines
-
-- name: copy utlu121s output to oracle_stage
-  copy: content="{{ utlu121s.stdout }}" dest="{{ oracle_stage }}/utlu121s.log"
 
 - name: Invalid object check (utluiobj.sql)
   shell: echo exit | sqlplus / as sysdba @utluiobj
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
   register: utluiobj
-  environment: env
+  environment: "{{ env }}"
 
 - debug: var=utluiobj.stdout_lines
 
@@ -141,10 +129,22 @@
   shell: echo exit | sqlplus / as sysdba @post_upgrade_tasks.sql
   args:
     chdir: "{{ oracle_stage }}"
-  environment: env
+  environment: "{{ env }}"
 
 - name: Recompile invalid objects
   shell: echo exit | sqlplus / as sysdba @utlprp
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
-  environment: env
+  environment: "{{ env }}"
+
+- name: Upgrade status check (utlu121s.sql)
+  shell: echo exit | sqlplus / as sysdba @utlu121s
+  args:
+    chdir: "{{ oracle_home }}/rdbms/admin"
+  register: utlu121s
+  environment: "{{ env }}"
+
+- debug: var=utlu121s.stdout_lines
+
+- name: copy utlu121s output to oracle_stage
+  copy: content="{{ utlu121s.stdout }}" dest="{{ oracle_stage }}/utlu121s.log"

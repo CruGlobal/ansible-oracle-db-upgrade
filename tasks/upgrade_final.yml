@@ -10,7 +10,7 @@
   shell: echo exit | sqlplus / as sysdba @upgrade_final_tasks.sql
   args:
     chdir: "{{ oracle_stage }}"
-  environment: env
+  environment: "{{ env }}"
 
 ## Backup Database
 - name: template final upgrade backup (level 0)
@@ -22,7 +22,7 @@
 
 - name: final upgrade backup (level 0)
   shell: rman @{{ oracle_stage }}/final_upgrade_backup_0.rman
-  environment:
+  environment: "{{ env }}"
     ORACLE_HOME: "{{ oracle_home }}"
     ORACLE_SID: "{{ db_name }}"
     PATH: "{{ oracle_home }}/bin"
