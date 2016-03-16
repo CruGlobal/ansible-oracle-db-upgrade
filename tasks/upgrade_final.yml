@@ -1,12 +1,12 @@
 ---
 #Steps to run 1 Week after upgrading Database
 
-- name: Final | Template upgrade_final_tasks.sql (restarts database)
+- name: Final | Template upgrade_final_tasks.sql
   template:
     src: upgrade_final_tasks.j2
     dest: "{{ oracle_stage }}/upgrade_final_tasks.sql"
 
-- name: Final | Run upgrade_final_tasks.sql
+- name: Final | Run upgrade_final_tasks.sql (restarts database)
   shell: echo exit | sqlplus / as sysdba @upgrade_final_tasks.sql
   args:
     chdir: "{{ oracle_stage }}"
@@ -23,10 +23,6 @@
 - name: final upgrade backup (level 0)
   shell: rman @{{ oracle_stage }}/final_upgrade_backup_0.rman
   environment: "{{ env }}"
-    ORACLE_HOME: "{{ oracle_home }}"
-    ORACLE_SID: "{{ db_name }}"
-    PATH: "{{ oracle_home }}/bin"
-    NLS_DATE_FORMAT: 'Mon DD YYYY HH24:MI:SS'
   async: 7200
   poll: 10
   when: database_parameters[db_name].log_mode == 'archivelog'

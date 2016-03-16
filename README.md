@@ -59,8 +59,8 @@ Example Playbook
 
 ```yaml
     - hosts: oracle
-      sudo: true
-      sudo_user: oracle
+      become: true
+      become_user: oracle
       vars:
         db_name: test
 
@@ -72,6 +72,10 @@ Example Playbook
 
 `pre_upgrade_backup` - Level 0 backup that runs during pre-upgrade checks.  If this is skipped do not run subsequent Level 1 backups.
 
+`archivelog` - Run during pre-upgrade playbook.  Shuts down database and enables archivelog and flashback database.
+
 `backup` - Level 1 backup that runs before database upgrade.
+
+`flashback` - Run during upgrade playbook.  Enables Flashback database and creates a guaranteed restore point.
 
 `final_upgrade_backup` - Level 0 backup that runs during final upgrade tasks.

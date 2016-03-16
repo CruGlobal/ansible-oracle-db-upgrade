@@ -1,5 +1,7 @@
 ---
 
+- debug: var=database_parameters[db_name].log_mode
+
 - name: template enable_archivelog (noarchivelog)
   template:
     src: enable_archivelog.j2
@@ -25,10 +27,7 @@
   shell: echo exit | sqlplus / as sysdba @enable_archivelog.sql
   args:
     chdir: "{{ oracle_stage }}"
-  environment: "{{ env }}"
-    ORACLE_HOME: "{{ oracle_home_old }}"
-    ORACLE_SID: "{{ db_name }}"
-    PATH: "{{ oracle_home_old }}/bin"
+  environment: "{{ env_old }}"
   when: database_parameters[db_name].log_mode == 'noarchivelog'
   tags: archivelog
 
@@ -41,11 +40,7 @@
 
 - name: backup database (level 0)
   shell: rman @{{ oracle_stage }}/pre_upgrade_backup_0.rman
-  environment: "{{ env }}"
-    ORACLE_HOME: "{{ oracle_home_old }}"
-    ORACLE_SID: "{{ db_name }}"
-    PATH: "{{ oracle_home_old }}/bin"
-    NLS_DATE_FORMAT: 'Mon DD YYYY HH24:MI:SS'
+  environment: "{{ env_old }}"
   async: 7200
   poll: 10
   tags: pre_upgrade_backup

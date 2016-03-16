@@ -10,10 +10,7 @@
   shell: echo exit | sqlplus / as sysdba @enable_flashback_database.sql
   args:
     chdir: "{{ oracle_stage }}"
-  environment: "{{ env }}"
-    ORACLE_HOME: "{{ oracle_home_old }}"
-    ORACLE_SID: "{{ db_name }}"
-    PATH: "{{ oracle_home_old }}/bin"
+  environment: "{{ env_old }}"
   when: database_parameters[db_name].log_mode == 'noarchivelog'
   tags: flashback
 
@@ -28,11 +25,7 @@
 
 - name: backup database (level 1)
   shell: rman @{{ oracle_stage }}/pre_upgrade_backup_1.rman
-  environment: "{{ env }}"
-    ORACLE_HOME: "{{ oracle_home_old }}"
-    ORACLE_SID: "{{ db_name }}"
-    PATH: "{{ oracle_home_old }}/bin"
-    NLS_DATE_FORMAT: 'Mon DD YYYY HH24:MI:SS'
+  environment: "{{ env_old }}"
   async: 7200
   poll: 10
   tags: backup
@@ -44,8 +37,8 @@
 #update db to run out of new home
 - name: update oratab with new database home
   lineinfile: "dest=/etc/oratab regexp='^{{ db_name }}' line='{{ db_name }}:{{ oracle_home }}:Y' state=present"
-  sudo: true
-  sudo_user: root
+  become: true
+  become_user: root
   tags: oratab
 
 - name: copy password file to new home
@@ -62,7 +55,7 @@
   shell: echo "startup upgrade;" | sqlplus / as sysdba
   environment: "{{ env }}"
 
-- name: run catupgrd.sql (log files in oracle_stage/<db_name>_upgrade/)
+- name: run catupgrd.sql (log files in ansible_stage/12c_upgrade/<db_name>/)
   shell: "cd {{ oracle_home }}/rdbms/admin; {{ oracle_home }}/perl/bin/perl catctl.pl -l {{ oracle_stage }} catupgrd.sql"
   environment: "{{ env }}"
   async: 10800  # 3 hrs
@@ -76,15 +69,6 @@
   shell: echo "startup;" | sqlplus / as sysdba
   environment: "{{ env }}"
 
-- name: Run postupgrade_fixups.sql
-  shell: echo exit | sqlplus / as sysdba @postupgrade_fixups.sql
-  args:
-    chdir: "{{ oracle_base }}/cfgtoollogs/{{ db_unique_name }}/preupgrade/"
-  register: postupgrade_fixups
-  environment: "{{ env }}"
-
-- debug: var=postupgrade_fixups.stdout_lines
-
 - name: Run catuppst.sql to complete the upgrade process
   shell: echo exit | sqlplus / as sysdba @catuppst
   args:
@@ -95,11 +79,20 @@
 - name: Show output of catuppst.sql
   debug: var=catuppst.stdout_lines
 
+- name: Run postupgrade_fixups.sql
+  shell: echo exit | sqlplus / as sysdba @postupgrade_fixups.sql
+  args:
+    chdir: "{{ oracle_base }}/cfgtoollogs/{{ db_unique_name }}/preupgrade/"
+  register: postupgrade_fixups
+  environment: "{{ env }}"
+
+- debug: var=postupgrade_fixups.stdout_lines
+
 - name: copy utlu121s output to oracle_stage
   copy: content="{{ catuppst.stdout }}" dest="{{ oracle_stage }}/catuppst.log"
 
 - name: Recompile invalid objects
-  shell: echo exit | sqlplus / as sysdba @utlprp
+  shell: echo exit | sqlplus / as sysdba @utlrp
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
   environment: "{{ env }}"
@@ -132,7 +125,7 @@
   environment: "{{ env }}"
 
 - name: Recompile invalid objects
-  shell: echo exit | sqlplus / as sysdba @utlprp
+  shell: echo exit | sqlplus / as sysdba @utlrp
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
   environment: "{{ env }}"
