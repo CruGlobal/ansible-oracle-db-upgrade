@@ -1,16 +1,16 @@
-Role Name
+Ansible Oracle DB Upgrade Role
 =========
 
-Upgrade an Oracle database.  Role is is divided into 3 sections that should be run in this order:
+This role will upgrade an Oracle database.  The role is is divided into 3 sections that should be run in this order:
 
-1. pre_upgrade.yml (no downtime if database is in archivelog mode)
+1. `pre_upgrade.yml` (no downtime if database is in archivelog mode)
  - run 24 hrs before planned database upgrade
  - runs pre-upgrade oracle script, performs full (level 0) backup, runs fixup scripts.
 
-2. upgrade.yml (Downtime is required!)
+2. `upgrade.yml` (Downtime is required!)
  - performs incremental (level 1) backup, enables flashback database and creates guaranteed restore point.  Runs manual database upgrade.  Takes another full backup after upgrade is complete.
 
-3. upgrade_final.yml (no downtime if database is in archivelog mode)
+3. `upgrade_final.yml` (no downtime if database is in archivelog mode)
  - run 7 days after upgrade to finalize
  - deletes guaranteed restore point before setting database compatibility parameter.  Takes full backup (level 0).
 
@@ -69,6 +69,19 @@ Example Playbook
 ```
 
 ### Optional Tags
+
+To skip these optional tags use `--skip-tags` when running the playbook.  For example, if you do not want to run RMAN backups before or during the upgrade you would execute these commands:
+
+```
+# Pre-Upgrade checks without backups
+ansible-playbook 12c_1_pre_upgrade.yml -i <path_to_inventory> --extra-vars="hosts=<hostname>" --skip-tags="pre_upgrade_backup"
+
+# Upgrade database, do not backup database.
+ansible-playbook 12c_2_upgrade.yml -i <path_to_inventory> --extra-vars="hosts=<hostname>" --skip-tags="backup"
+
+# Post-Upgrade tasks, do not backup database.
+ansible-playbook 12c_3_upgrade_final.yml -i <path_to_inventory> --extra-vars="hosts=<hostname>" --skip-tags="final_upgrade_backup"
+```
 
 `pre_upgrade_backup` - Level 0 backup that runs during pre-upgrade checks.  If this is skipped do not run subsequent Level 1 backups.
 
