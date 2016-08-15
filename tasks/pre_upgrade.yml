@@ -1,5 +1,14 @@
 ---
 
+# Fix for slow upgrades - Upgrade to 12c : CATUPOSB.SQL SLOW DURING UPGRADE (Doc ID 2147232.1)
+- name: Copy updated catuposb.sql
+  copy:
+    src: catuposb.sql
+    dest: "{{ oracle_home }}/rdbms/admin/"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: 0644
+
 - debug: var=database_parameters[db_name].log_mode
 
 - name: template enable_archivelog (noarchivelog)
