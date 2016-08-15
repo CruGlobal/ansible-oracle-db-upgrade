@@ -7,6 +7,11 @@
     state: directory
   tags: always
 
+- name: Run pre-checks
+  include: pre_checks.yml
+  when: master_node
+  tags: always
+
 - name: get DB Unique Name
   include: get_unique_name.yml
   when: master_node
@@ -15,7 +20,7 @@
 #Run pre-upgrade tasks one day before upgrade
 - name: run pre-upgrade tasks
   include: pre_upgrade.yml
-  when: pre_upgrade
+  when: pre_upgrade and master_node
   tags: pre_upgrade
 
 #Upgrade database to 12.1.0.2

@@ -7,7 +7,7 @@ oracle_home: "/app/oracle/{{ oracle_version }}/dbhome_1"
 env:
   ORACLE_HOME: "{{ oracle_home }}"
   ORACLE_BASE: "{{ oracle_base }}"
-  ORACLE_SID: "{{ db_name }}"
+  ORACLE_SID: "{{ db_name }}{{ host_num |default('') }}"
   TNS_ADMIN: "{{ tns_admin }}"
   PATH: "{{ oracle_home }}/bin:{{ oracle_home }}/OPatch:$PATH:/bin:/usr/bin::/usr/ccs/bin"
 
@@ -16,6 +16,6 @@ oracle_home_old: "/app/oracle/{{ oracle_version_old }}/dbhome_1"
 env_old:
   ORACLE_HOME: "{{ oracle_home_old }}"
   ORACLE_BASE: "{{ oracle_base }}"
-  ORACLE_SID: "{{ db_name }}"
+  ORACLE_SID: "{{ db_name }}{{ host_num |default('') }}"
   TNS_ADMIN: "{{ tns_admin }}"
   PATH: "{{ oracle_home_old }}/bin:{{ oracle_home_old }}/OPatch:$PATH:/bin:/usr/bin::/usr/ccs/bin"

@@ -18,10 +18,17 @@
   when: database_parameters[db_name].log_mode == 'noarchivelog'
   tags: archivelog
 
-- name: Shutdown database immediate (noarchivelog)
+- name: Shutdown database (single instance noarchivelog)
   shell: echo "shutdown immediate;" | sqlplus / as sysdba
   environment: "{{ env_old }}"
-  when: database_parameters[db_name].log_mode == 'noarchivelog'
+  when: database_parameters[db_name].log_mode == 'noarchivelog' and oracle_install_type == 'si'
+  tags:
+    - archivelog
+
+- name: Shutdown database (rac, noarchivelog)
+  shell: srvctl stop database -d {{ db_name }}
+  environment: "{{ env_old }}"
+  when: database_parameters[db_name].log_mode == 'noarchivelog' and oracle_install_type == 'rac'
   tags:
     - archivelog
 
@@ -39,6 +46,13 @@
   environment: "{{ env_old }}"
   when: database_parameters[db_name].log_mode == 'noarchivelog'
   tags: archivelog
+
+- name: Startup database (rac, noarchivelog)
+  shell: srvctl start database -d {{ db_name }}
+  environment: "{{ env_old }}"
+  when: database_parameters[db_name].log_mode == 'noarchivelog' and oracle_install_type == 'rac'
+  tags:
+    - archivelog
 
 ## Backup Database
 - name: template backup script (level 0)

@@ -1,0 +1,11 @@
+---
+
+- name: fail if required variables are not defined
+  fail: msg="{{ item }} is not defined for {{ ansible_hostname }}"
+  when: "{{ item }} is not defined"
+  tags: always
+  with_items:
+    - oracle_install_type
+    - oracle_version
+    - db_name.log_mode
+    - db_name.db_version
