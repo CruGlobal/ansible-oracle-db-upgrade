@@ -7,5 +7,7 @@
   with_items:
     - oracle_install_type
     - oracle_version
-    - db_name.log_mode
-    - db_name.db_version
+    - db_name
+    - database_parameters[db_name]
+    - database_parameters[db_name].log_mode
+    - database_parameters[db_name].db_version
