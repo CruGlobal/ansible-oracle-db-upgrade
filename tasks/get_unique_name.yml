@@ -11,13 +11,20 @@
   shell: ./db_unique_name.sh
   args:
     chdir: "{{ oracle_stage }}"
+    creates: db_unique_name.log
   environment: "{{ env_old }}"
-  register: db_unique_name_out
   tags: always
 
-- debug: var=db_unique_name_out.stdout_lines[0]
+- name: Register Unique name
+  shell: cat db_unique_name.log
+  args:
+    chdir: "{{ oracle_stage }}"
+  register: db_unique_name_out
+  tags: always
 
 - name: Set db_unique_name variable
   set_fact:
     db_unique_name: "{{ db_unique_name_out.stdout_lines[0] }}"
   tags: always
+
+- debug: var=db_unique_name

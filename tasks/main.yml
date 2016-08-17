@@ -10,12 +10,16 @@
 - name: Run pre-checks
   include: pre_checks.yml
   when: master_node
-  tags: always
+  tags:
+    - always
+    - pre_checks
 
 - name: get DB Unique Name
   include: get_unique_name.yml
   when: master_node
-  tags: always
+  tags:
+    - always
+    - unique_name
 
 #Run pre-upgrade tasks one day before upgrade
 - name: run pre-upgrade tasks
