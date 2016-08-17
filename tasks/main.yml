@@ -29,8 +29,8 @@
 
 #Upgrade database to 12.1.0.2
 - name: upgrade database
-  include: upgrade.yml
-  when: upgrade
+  include: upgrade_{{ oracle_install_type }}.yml
+  when: upgrade and master_node
   tags: upgrade
 
 #Upgrade Timezone
