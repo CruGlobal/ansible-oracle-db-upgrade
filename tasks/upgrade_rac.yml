@@ -12,7 +12,7 @@
   args:
     chdir: "{{ oracle_stage }}"
   environment: "{{ env_old }}"
-  when: database_parameters[db_name].log_mode == 'noarchivelog' and master_node
+  when: master_node
   tags: flashback
 
 - name: template backup script (level 1)
@@ -47,9 +47,12 @@
 
 #update db to run out of new home
 - name: update oratab with new database home
-  lineinfile: "dest=/etc/oratab regexp='^{{ db_name }}' line='{{ db_name }}:{{ oracle_home }}:Y' state=present"
+  lineinfile: "dest=/etc/oratab regexp='^{{ item }}' line='{{ item }}:{{ oracle_home }}:Y    #line added by Ansible' state=present"
   become: true
   become_user: root
+  with_items:
+    - "{{ db_name }}"
+    - "{{ oracle_sid }}"
   tags: oratab
 
 - name: Copy files to new home (rac)
@@ -62,16 +65,23 @@
 
 # glogin.sql script causes errors during upgrade
 - name: rename glogin.sql in 12c DB Home.
-  shell: "mv {{ oracle_home }}/sqlplus/admin/glogin.sql {{ oracle_home }}/sqlplus/admin/upg_glogin.sql"
+  shell: "mv glogin.sql upg_glogin.sql"
+  args:
+    chdir: "{{ oracle_home }}/sqlplus/admin"
+    creates: upg_glogin.sql
   when: master_node
 
 - name: startup upgrade
   shell: echo "startup upgrade;" | sqlplus / as sysdba
   environment: "{{ env }}"
+  register: sqlplus_result
+  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
   when: master_node
 
 - name: run catupgrd.sql (log files in ansible_stage/12c_upgrade/<db_name>/)
-  shell: "cd {{ oracle_home }}/rdbms/admin; {{ oracle_home }}/perl/bin/perl catctl.pl -l {{ oracle_stage }} catupgrd.sql"
+  shell: "{{ oracle_home }}/perl/bin/perl catctl.pl -l {{ oracle_stage }} catupgrd.sql"
+  args:
+    chdir: "{{ oracle_home }}/rdbms/admin"
   environment: "{{ env }}"
   async: 10800  # 3 hrs
   poll: 30
@@ -79,11 +89,16 @@
 
 # rename upg_glogin back to glogin after upgraded
 - name: rename glogin.sql in 12c DB Home.
-  shell: "mv {{ oracle_home }}/sqlplus/admin/upg_glogin.sql {{ oracle_home }}/sqlplus/admin/glogin.sql"
+  shell: "mv upg_glogin.sql glogin.sql"
+  args:
+    chdir: "{{ oracle_home }}/sqlplus/admin"
+    creates: glogin.sql
   when: master_node
 
 - name: Startup Database
   shell: echo "startup;" | sqlplus / as sysdba
+  register: sqlplus_result
+  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
   environment: "{{ env }}"
   when: master_node
 
@@ -92,6 +107,7 @@
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
   register: catuppst
+  failed_when: "'ERROR' in catuppst.stdout or catuppst.rc != 0"
   environment: "{{ env }}"
   when: master_node
 
@@ -104,6 +120,7 @@
   args:
     chdir: "{{ oracle_base }}/cfgtoollogs/{{ db_unique_name }}/preupgrade/"
   register: postupgrade_fixups
+  failed_when: "'ERROR' in postupgrade_fixups.stdout or postupgrade_fixups.rc != 0"
   environment: "{{ env }}"
   when: master_node
 
@@ -118,6 +135,8 @@
   shell: echo exit | sqlplus / as sysdba @utlrp
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
+  register: sqlplus_result
+  failed_when: "sqlplus_result.rc != 0"
   environment: "{{ env }}"
   when: master_node
 
@@ -129,6 +148,7 @@
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
   register: utluiobj
+  failed_when: "'ERROR' in utluiobj.stdout or utluiobj.rc != 0"
   environment: "{{ env }}"
   when: master_node
 
@@ -151,12 +171,16 @@
   args:
     chdir: "{{ oracle_stage }}"
   environment: "{{ env }}"
+  register: sqlplus_result
+  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
   when: master_node
 
 - name: Recompile invalid objects
   shell: echo exit | sqlplus / as sysdba @utlrp
   args:
     chdir: "{{ oracle_home }}/rdbms/admin"
+  register: sqlplus_result
+  failed_when: "sqlplus_result.rc != 0"
   environment: "{{ env }}"
   when: master_node
 
@@ -166,6 +190,7 @@
     chdir: "{{ oracle_home }}/rdbms/admin"
   register: utlu121s
   environment: "{{ env }}"
+  failed_when: "'ERROR' in utlu121s.stdout or utlu121s.rc != 0"
   when: master_node
 
 - debug: var=utlu121s.stdout_lines
