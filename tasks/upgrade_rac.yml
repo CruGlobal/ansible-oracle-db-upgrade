@@ -200,6 +200,12 @@
   copy: content="{{ utlu121s.stdout }}" dest="{{ oracle_stage }}/utlu121s.log"
   when: master_node
 
+#Upgrade Timezone
+- name: upgrade timezone
+  include: upgrade_tzv.yml
+  when: upgrade_tzv and master_node
+  tags: upgrade_tzv
+
 - name: Set cluster database to true
   shell: echo "alter system set cluster_database=true scope=spfile;" | sqlplus / as sysdba
   environment: "{{ env }}"

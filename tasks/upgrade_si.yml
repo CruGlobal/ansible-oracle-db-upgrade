@@ -141,3 +141,9 @@
 
 - name: copy utlu121s output to oracle_stage
   copy: content="{{ utlu121s.stdout }}" dest="{{ oracle_stage }}/utlu121s.log"
+
+#Upgrade Timezone
+- name: upgrade timezone
+  include: upgrade_tzv.yml
+  when: upgrade_tzv
+  tags: upgrade_tzv

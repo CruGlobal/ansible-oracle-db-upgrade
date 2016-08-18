@@ -33,14 +33,8 @@
   when: upgrade
   tags: upgrade
 
-#Upgrade Timezone
-- name: upgrade timezone
-  include: upgrade_tzv.yml
-  when: upgrade_tzv
-  tags: upgrade_tzv
-
 #Run final upgrade tasks 1 week after upgrading database
 - name: final upgrade tasks
-  include: upgrade_final.yml
+  include: upgrade_final_{{ oracle_install_type }}.yml
   when: upgrade_final
   tags: upgrade_final
