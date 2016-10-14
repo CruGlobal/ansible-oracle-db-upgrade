@@ -1,7 +1,15 @@
+startup mount;
+
 set linesize 1000;
 spool {{ oracle_stage }}/enable_archivelog.log
 
 alter database archivelog;
 alter database flashback on;
 
+{% if oracle_install_type == 'si' %}
 alter database open;
+{% endif %}
+
+{% if oracle_install_type == 'rac' %}
+shutdown immediate;
+{% endif %}

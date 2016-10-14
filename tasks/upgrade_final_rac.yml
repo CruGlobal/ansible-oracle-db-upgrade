@@ -1,0 +1,60 @@
+---
+#Steps to run 1 Week after upgrading Database
+- name: Drop restore point and set compatible parameter
+  shell: echo "{{ item }};" | sqlplus / as sysdba
+  register: sqlplus_result
+  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+  environment: "{{ env }}"
+  when: master_node
+  with_items:
+    - DROP RESTORE POINT before_upgrade
+    - alter system set compatible='{{ oracle_version }}' scope=spfile
+
+- name: Shutdown database
+  shell: srvctl stop database -d {{ db_name }}
+  environment: "{{ env }}"
+  when: master_node
+
+- name: Disable Archivelog Mode
+  shell: echo "{{ item }};" | sqlplus / as sysdba
+  register: sqlplus_result
+  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+  environment: "{{ env }}"
+  when: master_node and database_parameters[db_name].log_mode == 'noarchivelog'
+  with_items:
+    - startup mount
+    - alter database flashback off
+    - alter database noarchivelog
+    - shutdown immediate
+
+- name: Start database
+  shell: srvctl start database -d {{ db_name }}
+  environment: "{{ env }}"
+  when: master_node
+
+- name: Gather fixed object stats
+  shell: echo "exec DBMS_STATS.GATHER_FIXED_OBJECTS_STATS;" | sqlplus / as sysdba
+  register: sqlplus_result
+  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+  environment: "{{ env }}"
+  when: master_node
+
+## Backup Database
+- name: template final upgrade backup (level 0)
+  template:
+    src: final_upgrade_backup_0.j2
+    dest: "{{ oracle_stage }}/final_upgrade_backup_0.rman"
+  when: master_node and database_parameters[db_name].log_mode == 'archivelog'
+  tags: final_upgrade_backup
+
+- name: final upgrade backup (level 0)
+  shell: rman @{{ oracle_stage }}/final_upgrade_backup_0.rman
+  environment: "{{ env }}"
+  async: 7200
+  poll: 10
+  when: master_node and database_parameters[db_name].log_mode == 'archivelog'
+  tags: final_upgrade_backup
+  register: final_upg
+
+- debug: var=final_upg
+  tags: final_upgrade_backup

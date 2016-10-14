@@ -1,0 +1,30 @@
+---
+
+- name: Template db_unique_name.sql
+  template:
+    src: db_unique_name.j2
+    dest: "{{ oracle_stage }}/db_unique_name.sh"
+    mode: 0744
+  tags: always
+
+- name: Run db_unique_name.sql
+  shell: ./db_unique_name.sh
+  args:
+    chdir: "{{ oracle_stage }}"
+    creates: db_unique_name.log
+  environment: "{{ env_old }}"
+  tags: always
+
+- name: Register Unique name
+  shell: cat db_unique_name.log
+  args:
+    chdir: "{{ oracle_stage }}"
+  register: db_unique_name_out
+  tags: always
+
+- name: Set db_unique_name variable
+  set_fact:
+    db_unique_name: "{{ db_unique_name_out.stdout_lines[0] }}"
+  tags: always
+
+- debug: var=db_unique_name
