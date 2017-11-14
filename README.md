@@ -32,6 +32,7 @@ database_parameters:
     redolog_size_mb: 75
     db_recovery_file_dest_size: #size of fra, 10G
     log_mode: # archivelog, noarchivelog
+    is_ps: true # run steps specific to PeopleSoft databases
 ```
 
 defaults/main.yml
@@ -66,6 +67,63 @@ Example Playbook
 
       roles:
         - role: db-upgrade
+```
+
+How to Rollback an Upgrade from 12c to 11g
+----------------
+If an issue is encountered after the upgrade, you can use the guaranteed restore point that is created in the `12c_2_upgrade.yml` playbook. **Rollback can only be done if the compatibility parameter has not been set to the new database version**.
+
+```
+[oracle@tlorad01 ~]$ srvctl stop database -d pshrupg
+[oracle@tlorad01 ~]$ sqlplus / as sysdba
+
+SQL*Plus: Release 12.1.0.2.0 Production on Tue Nov 14 10:48:35 2017
+
+Copyright (c) 1982, 2014, Oracle.  All rights reserved.
+
+Connected to an idle instance.
+
+[SYS@pshrupg1]:SQL> startup mount
+[SYS@pshrupg1]:SQL> flashback database to restore point before_upgrade;
+Flashback complete.
+
+[SYS@pshrupg1]:SQL> shutdown immediate
+Database dismounted.
+ORACLE instance shut down.
+[SYS@pshrupg1]:SQL> exit
+
+# update /etc/oratab to point to old database home
+pshrupg1:/app/oracle/11.2.0.4/dbhome_1:Y    #line added by Ansible
+pshrupg:/app/oracle/11.2.0.4/dbhome_1:N         # line added by Agent
+
+[oracle@tlorad01 ~]$ . oraenv
+ORACLE_SID = [pshrupg1] ? pshrupg1
+The Oracle base remains unchanged with value /app/oracle
+
+[oracle@tlorad01 ~]$ echo $ORACLE_HOME
+/app/oracle/11.2.0.4/dbhome_1
+
+[oracle@tlorad01 ~]$ sqlplus / as sysdba
+[SYS@pshrupg1]:SQL> startup mount pfile='/u01/oracle/ansible_stage/12c_upgrade/pshrupg/pshrupg_pfile.ora'
+[SYS@pshrupg1]:SQL> create spfile='+DATA1/pshrupg/spfilepshrupg.ora' from pfile='/u01/oracle/ansible_stage/12c_upgrade/pshrupg/pshrupg_pfile.ora';
+
+File created.
+
+[SYS@pshrupg1]:SQL> shutdown immediate
+Database dismounted.
+ORACLE instance shut down.
+[SYS@pshrupg1]:SQL> startup mount
+[SYS@pshrupg1]:SQL> alter database open resetlogs;
+Database altered.
+
+[SYS@pshrupg1]:SQL> shutdown immediate
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+[SYS@pshrupg1]:SQL> exit
+
+[oracle@tlorad01 ~]$ /app/oracle/12.1.0.2/dbhome_1/bin/srvctl downgrade database -d pshrupg -oraclehome /app/oracle/11.2.0.4/dbhome_1 -targetversion 11.2.0.4.0
+[oracle@tlorad01 ~]$ srvctl start database -d pshrupg
 ```
 
 ### Optional Tags
