@@ -200,6 +200,11 @@
   copy: content="{{ utlu121s.stdout }}" dest="{{ oracle_stage }}/utlu121s.log"
   when: master_node
 
+- name: Gather PeopleSoft database stats with pscbo
+  shell: echo "exec PSCBO_STATS.SYNC_SCHEMA_STATS('SYSADM');" | sqlplus / as sysdba
+  environment: "{{ env }}"
+  when: database_parameters[db_name].is_ps == true
+
 #Upgrade Timezone
 - name: upgrade timezone
   include: upgrade_tzv.yml
