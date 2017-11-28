@@ -11,3 +11,10 @@ EXECUTE dbms_stats.gather_dictionary_stats;
 
 alter system set "_optimizer_aggr_groupby_elim"=false scope=both;
 alter system set "_optimizer_reduce_groupby_key"=false scope=both;
+
+-- Required Interim Patches for the Oracle Database with PeopleSoft (Doc ID 1100831.1)
+-- To avoid performance regressions in PeopleSoft, disable optimizer_adaptive_features
+{% if database_parameters[db_name].is_ps == true %}
+alter system set optimizer_adaptive_features=FALSE scope=both;
+alter system set "_fix_control"='14033181:0' scope=both;
+{% endif %}

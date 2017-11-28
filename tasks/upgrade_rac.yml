@@ -243,3 +243,14 @@
 
 - debug: var=srvctl_service.stdout_lines
   when: master_node
+
+# a couple components were showing a status of "Upgraded"
+# recompiling invalid objects changed the stats to "Valid"
+- name: Recompile invalid objects
+  shell: echo exit | sqlplus / as sysdba @utlrp
+  args:
+    chdir: "{{ oracle_home }}/rdbms/admin"
+  register: sqlplus_result
+  failed_when: "sqlplus_result.rc != 0"
+  environment: "{{ env }}"
+  when: master_node
