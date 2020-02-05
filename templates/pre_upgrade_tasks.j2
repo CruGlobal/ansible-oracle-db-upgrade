@@ -22,11 +22,11 @@ SELECT 'CREATE '||DECODE(U.NAME,'PUBLIC','public ')||'DATABASE LINK '||CHR(10)
 FROM SYS.LINK$ L, SYS.USER$ U
 WHERE L.OWNER# = U.USER#;
 
-PROMP Gather Optimizer Statistics
-EXECUTE dbms_stats.gather_dictionary_stats;
-
-PROMP Purge the Database Recycle Bin Before Upgrading
-PURGE DBA_RECYCLEBIN;
+PROMP Databases Users with incompatible 10G passwords
+select USERNAME
+from DBA_USERS
+where ( PASSWORD_VERSIONS = '10G 'or PASSWORD_VERSIONS = '10G HTTP ')
+and USERNAME <> 'ANONYMOUS';
 
 PROMP Check SYS and System default tablespace
 SELECT username, default_tablespace FROM dba_users WHERE username in ('SYS','SYSTEM');

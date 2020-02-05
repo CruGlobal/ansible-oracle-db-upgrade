@@ -1,17 +1,5 @@
 ---
-
-# Fix for slow upgrades - Upgrade to 12c : CATUPOSB.SQL SLOW DURING UPGRADE (Doc ID 2147232.1)
-- name: Copy updated catuposb.sql
-  copy:
-    src: catuposb.sql
-    dest: "{{ oracle_home }}/rdbms/admin/"
-    owner: "{{ oracle_user }}"
-    group: "{{ oracle_group }}"
-    mode: 0644
-
-- debug: var=database_parameters[db_name].log_mode
-
-- name: template enable_archivelog (noarchivelog)
+- name: Template enable_archivelog (noarchivelog)
   template:
     src: enable_archivelog.j2
     dest: "{{ oracle_stage }}/enable_archivelog.sql"
@@ -54,7 +42,7 @@
   tags:
     - archivelog
 
-## Backup Database
+# Backup Database
 - name: template backup script (level 0)
   template:
     src: pre_upgrade_backup_0.j2
@@ -68,21 +56,22 @@
   poll: 10
   tags: pre_upgrade_backup
 
-- name: run preupgrade.sql
-  shell: echo exit | sqlplus / as sysdba @preupgrd.sql
+- name: Run preupgrade utility
+  shell: "{{ oracle_base }}/{{ oracle_version }}/dbhome_1/jdk/bin/java -jar preupgrade.jar TERMINAL TEXT"
   args:
-    chdir: "{{ oracle_home }}/rdbms/admin"
-  register: preupgrd
+    chdir: "{{ oracle_base }}/{{ oracle_version }}/dbhome_1/rdbms/admin"
   environment: "{{ env_old }}"
-  tags: preupgrade_script
+  register: preupgrade_output
+  tags: preupgrade
 
-- debug: var=preupgrd
-  tags: preupgrade_script
+- name: Print preupgrade utility output before continuing
+  debug: var=preupgrade_output.stdout_lines
+  tags: preupgrade
 
-# - name: copy preupgrd output to oracle_stage
-#   copy: content="{{ preupgrd.stdout }}" dest="{{ oracle_stage }}/preupgrade.log"
+- pause:
+    prompt: Check preupgrade utility output to confirm no issues
 
-- name: run preupgrade_fixups.sql
+- name: Run preupgrade_fixups.sql
   shell: echo exit | sqlplus / as sysdba @preupgrade_fixups.sql
   args:
     chdir: "{{ oracle_base }}/cfgtoollogs/{{ db_unique_name }}/preupgrade/"
@@ -91,16 +80,25 @@
 
 - debug: var=fixups.stdout_lines
 
-- name: copy fixups output to oracle_stage
+- name: Copy fixups output to oracle_stage
   copy: content="{{ fixups.stdout }}" dest="{{ oracle_stage }}/preupgrade_fixups.log"
 
-- name: tempalate pre_upgrade_tasks.sql
+- pause:
+    prompt: Check preupgrade_fixups output before continuing
+
+- name: Template pre_upgrade_tasks.sql
   template:
     src: pre_upgrade_tasks.j2
     dest: "{{ oracle_stage }}/pre_upgrade_tasks.sql"
 
-- name: run pre_upgrade_tasks.sql
+- name: Run pre_upgrade_tasks.sql
   shell: echo exit | sqlplus / as sysdba @pre_upgrade_tasks.sql
   args:
     chdir: "{{ oracle_stage }}"
   environment: "{{ env_old }}"
+  register: pre_upgrade_tasks_output
+
+- debug: var=pre_upgrade_tasks_output.stdout_lines
+
+- pause:
+    prompt: Review output of pre_upgrade_tasks script before continuing

@@ -3,11 +3,3 @@ spool {{ oracle_stage }}/post_upgrade_tasks.log
 
 PROMP Gather Optimizer Statistics
 EXECUTE dbms_stats.gather_dictionary_stats;
-
---Avoid Poor Performance or Wrong Results (Doc ID 2034610.1)
---Set parameters to prevent several wrong results bugs, including:
---"Wrong results from GROUP BY query when "_optimizer_aggr_groupby_elim"=true" (Document 20508819.8) and
---"Wrong results from OUTER JOIN with a bind variable and a GROUP BY clause in 12.1.0.2" (Document 20634449.8):
-
-alter system set "_optimizer_aggr_groupby_elim"=false scope=both;
-alter system set "_optimizer_reduce_groupby_key"=false scope=both;
