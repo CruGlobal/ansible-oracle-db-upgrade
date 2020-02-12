@@ -2,7 +2,7 @@
 # Steps to upgrade Timezone on 12c Database
 # See MOS Note: Scripts to automatically update the RDBMS DST (timezone) version in an 11gR2 or 12cR1 database . (Doc ID 1585343.1)
 
-- name: copy scripts to oracle_stage
+- name: Copy scripts to oracle_stage
   copy:
     src: "{{ item }}"
     dest: "{{ oracle_stage }}"
@@ -10,7 +10,7 @@
     - upg_tzv_apply.sql
     - upg_tzv_check.sql
 
-- name: run upg_tzv_check.sql
+- name: Run upg_tzv_check.sql
   shell: echo exit | sqlplus / as sysdba @upg_tzv_check.sql
   args:
     chdir: "{{ oracle_stage }}"
@@ -19,7 +19,7 @@
 
 - debug: var=tzv_check
 
-- name: run upg_tzv_apply.sql (
+- name: Run upg_tzv_apply.sql (
   shell: echo exit | sqlplus / as sysdba @upg_tzv_apply.sql
   args:
     chdir: "{{ oracle_stage }}"
@@ -27,3 +27,6 @@
   environment: "{{ env }}"
 
 - debug: var=tzv_apply
+
+- pause:
+    prompt: Check output of timezone upgrade before continuing

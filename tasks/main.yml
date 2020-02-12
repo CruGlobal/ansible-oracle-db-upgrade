@@ -21,19 +21,19 @@
     - always
     - unique_name
 
-#Run pre-upgrade tasks one day before upgrade
+# Run pre-upgrade tasks one day before upgrade
 - name: run pre-upgrade tasks
   include: pre_upgrade.yml
   when: pre_upgrade and master_node
   tags: pre_upgrade
 
-#Upgrade database to 12.1.0.2
+# Upgrade database to 19c
 - name: upgrade database
   include: upgrade_{{ oracle_install_type }}.yml
   when: upgrade
   tags: upgrade
 
-#Run final upgrade tasks 1 week after upgrading database
+# Run final upgrade tasks 1 week after upgrading database
 - name: final upgrade tasks
   include: upgrade_final_{{ oracle_install_type }}.yml
   when: upgrade_final

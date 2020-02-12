@@ -5,15 +5,19 @@ run
 allocate channel backup_disk1 type disk;
 allocate channel backup_disk2 type disk;
 allocate channel backup_disk3 type disk;
+{% if db_env == 'prod' %}
 allocate channel backup_disk4 type disk;
 allocate channel backup_disk5 type disk;
 allocate channel backup_disk6 type disk;
+{% endif %}
 backup incremental level 0 cumulative as COMPRESSED BACKUPSET tag 'before_upgrade_full' database;
 backup current controlfile tag 'before_upgrade_full';
 release channel backup_disk1;
 release channel backup_disk2;
 release channel backup_disk3;
+{% if db_env == 'prod' %}
 release channel backup_disk4;
 release channel backup_disk5;
 release channel backup_disk6;
+{% endif %}
 }
