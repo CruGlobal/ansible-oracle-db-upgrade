@@ -1,0 +1,217 @@
+---
+
+# upgrade prep
+- name: Create backups, disable RAC and shutdown database
+  block:
+
+    - name: Template enable_flashback_database
+      template:
+        src: enable_flashback_database.j2
+        dest: "{{ oracle_stage }}/enable_flashback_database.sql"
+      tags: flashback
+
+    - name: Create guaranteed flashback restore point
+      shell: echo exit | sqlplus / as sysdba @enable_flashback_database.sql
+      args:
+        chdir: "{{ oracle_stage }}"
+      environment: "{{ env_old }}"
+      tags: flashback
+
+    - name: template backup script (level 1)
+      template:
+        src: pre_upgrade_backup_1.j2
+        dest: "{{ oracle_stage }}/pre_upgrade_backup_1.rman"
+        owner: "{{ oracle_user }}"
+        group: "{{ oracle_group }}"
+        mode: 0600
+      tags: backup
+
+    - name: backup database (level 1)
+      shell: rman @{{ oracle_stage }}/pre_upgrade_backup_1.rman
+      environment: "{{ env_old }}"
+      async: 7200
+      poll: 10
+      tags: backup
+
+    - name: Set cluster database to false
+      shell: echo "alter system set cluster_database=false scope=spfile;" | sqlplus / as sysdba
+      environment: "{{ env_old }}"
+      register: sqlplus_result
+      failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+      when: oracle_install_type == 'rac'
+
+    # glogin.sql script causes errors during upgrade
+    - name: Rename glogin.sql in {{ oracle_version }} DB Home.
+      shell: "mv glogin.sql upg_glogin.sql"
+      args:
+        chdir: "{{ oracle_home }}/sqlplus/admin"
+        creates: upg_glogin.sql
+
+    - name: Shutdown database
+      shell: srvctl stop database -d {{ db_name }}
+      environment: "{{ env_old }}"
+
+  when: master_node
+
+
+- name: Copy password file and spfile to new database home
+  copy:
+    src: "{{ oracle_home_old }}/dbs/{{ item }}"
+    dest: "{{ oracle_home }}/dbs/"
+    remote_src: yes
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: 0640
+  with_items:
+    - "init{{ oracle_sid }}.ora"
+    - "orapw{{ oracle_sid }}"
+
+- name: Upgrade database
+  block:
+
+    - name: startup upgrade
+      shell: echo "startup upgrade;" | sqlplus / as sysdba
+      environment: "{{ env }}"
+      register: sqlplus_result
+      failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+
+    - name: Run dbupgrade (log files in ansible_stage/{{ oracle_version }}/<db_name>/)
+      shell: "{{ oracle_home }}/bin/dbupgrade -l {{ oracle_stage }}"
+      args:
+        chdir: "{{ oracle_home }}/rdbms/admin"
+      environment: "{{ env }}"
+      async: 10800  # 3 hrs
+      poll: 30
+
+    - name: Startup Database
+      shell: echo "startup;" | sqlplus / as sysdba
+      register: sqlplus_result
+      failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+      environment: "{{ env }}"
+
+    - name: Upgrade Clusterware database configuration
+      shell: "srvctl upgrade database -d {{ db_name }} -o {{ oracle_home }}"
+      environment: "{{ env }}"
+
+  when: master_node
+
+- name: update oratab with new database home
+  lineinfile: "dest=/etc/oratab regexp='^{{ item }}' line='{{ item }}:{{ oracle_home }}:Y    #line added by Ansible' state=present"
+  become: true
+  become_user: root
+  with_items:
+    - "{{ db_name }}"
+    - "{{ oracle_sid }}"
+  tags: oratab
+
+- name: Post Upgrade Tasks
+  block:
+
+    - name: Recompile invalid objects
+      shell: echo exit | sqlplus / as sysdba @utlrp
+      args:
+        chdir: "{{ oracle_home }}/rdbms/admin"
+      register: sqlplus_result
+      failed_when: "sqlplus_result.rc != 0"
+      environment: "{{ env }}"
+
+    - name: Run postupgrade_fixups.sql
+      shell: echo exit | sqlplus / as sysdba @postupgrade_fixups.sql
+      args:
+        chdir: "{{ oracle_base }}/cfgtoollogs/{{ db_unique_name }}/preupgrade/"
+      register: postupgrade_fixups
+      failed_when: "'ERROR' in postupgrade_fixups.stdout or postupgrade_fixups.rc != 0"
+      environment: "{{ env }}"
+
+    - debug: var=postupgrade_fixups.stdout_lines
+
+    - name: copy postupgrade_fixups output to oracle_stage
+      copy:
+        content: "{{ postupgrade_fixups.stdout }}"
+        dest: "{{ oracle_stage }}/postupgrade_fixups.log"
+
+    #Post upgrade tasks
+    - name: template post_upgrade_tasks.sql
+      template:
+        src: post_upgrade_tasks.j2
+        dest: "{{ oracle_stage }}/post_upgrade_tasks.sql"
+
+    - name: run post_upgrade_tasks.sql
+      shell: echo exit | sqlplus / as sysdba @post_upgrade_tasks.sql
+      args:
+        chdir: "{{ oracle_stage }}"
+      environment: "{{ env }}"
+      register: sqlplus_result
+      failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+
+    - name: Recompile invalid objects
+      shell: echo exit | sqlplus / as sysdba @utlrp
+      args:
+        chdir: "{{ oracle_home }}/rdbms/admin"
+      register: sqlplus_result
+      failed_when: "sqlplus_result.rc != 0"
+      environment: "{{ env }}"
+
+    - name: Upgrade status check
+      shell: echo exit | sqlplus / as sysdba @utlusts
+      args:
+        chdir: "{{ oracle_home }}/rdbms/admin"
+      register: utlusts
+      environment: "{{ env }}"
+      failed_when: "'ERROR' in utlusts.stdout or utlusts.rc != 0"
+
+    - name: Copy utlusts output to oracle_stage
+      copy:
+        content: "{{ utlusts.stdout }}"
+        dest: "{{ oracle_stage }}/utlusts.log"
+
+    - debug: var=utlusts.stdout_lines
+      when: master_node
+
+    - pause:
+        prompt: Check output of utlusts.sql before continuing
+
+  when: master_node
+
+# Upgrade Timezone
+- name: Upgrade timezone
+  include: upgrade_tzv.yml
+  when: master_node or oracle_install_type == 'si'
+  tags: upgrade_tzv
+
+- name: Enable RAC
+  block:
+
+    - name: Set cluster database to true
+      shell: echo "alter system set cluster_database=true scope=spfile;" | sqlplus / as sysdba
+      environment: "{{ env }}"
+      register: sqlplus_result
+      failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+
+    - name: shutdown database immediate
+      shell: echo "shutdown immediate;" | sqlplus / as sysdba
+      environment: "{{ env }}"
+      register: sqlplus_result
+      failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+
+    - name: Startup Database
+      shell: "srvctl start database -d {{ db_name }}"
+      environment: "{{ env }}"
+
+  when: master_node and oracle_install_type == 'rac'
+
+- name: Show database service configuration
+  shell: "srvctl config service -d {{ db_name }} -s {{ db_name }}app"
+  environment: "{{ env }}"
+  register: srvctl_service
+  when: master_node
+
+- debug: var=srvctl_service.stdout_lines
+  when: master_node
+
+- name: Rename glogin.sql in {{ oracle_version }} DB Home.
+  shell: "mv upg_glogin.sql glogin.sql"
+  args:
+    chdir: "{{ oracle_home }}/sqlplus/admin"
+    creates: glogin.sql
+  when: master_node

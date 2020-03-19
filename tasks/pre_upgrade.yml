@@ -47,6 +47,15 @@
   template:
     src: pre_upgrade_backup_0.j2
     dest: "{{ oracle_stage }}/pre_upgrade_backup_0.rman"
+  when: oracle_install_type == 'rac'
+  tags: pre_upgrade_backup
+
+# use more threads for DW backups
+- name: template dw backup script (level 0)
+  template:
+    src: pre_upgrade_backup_0_dw.j2
+    dest: "{{ oracle_stage }}/pre_upgrade_backup_0.rman"
+  when: oracle_install_type == 'si_asm'
   tags: pre_upgrade_backup
 
 - name: backup database (level 0)
@@ -55,6 +64,13 @@
   async: 7200
   poll: 10
   tags: pre_upgrade_backup
+
+# existing glogin.sql causes issues with the pre-upgrade utility
+- name: Rename glogin.sql in {{ oracle_version }} DB Home.
+  shell: "mv glogin.sql upg_glogin.sql"
+  args:
+    chdir: "{{ oracle_home_old }}/sqlplus/admin"
+    creates: upg_glogin.sql
 
 - name: Run preupgrade utility
   shell: "{{ oracle_base }}/{{ oracle_version }}/dbhome_1/jdk/bin/java -jar preupgrade.jar TERMINAL TEXT"
@@ -102,3 +118,9 @@
 
 - pause:
     prompt: Review output of pre_upgrade_tasks script before continuing
+
+- name: Restore glogin.sql
+  shell: "mv upg_glogin.sql glogin.sql"
+  args:
+    chdir: "{{ oracle_home_old }}/sqlplus/admin"
+    creates: glogin.sql

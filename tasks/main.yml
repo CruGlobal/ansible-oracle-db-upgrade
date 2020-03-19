@@ -29,12 +29,12 @@
 
 # Upgrade database to 19c
 - name: upgrade database
-  include: upgrade_{{ oracle_install_type }}.yml
+  include: upgrade.yml
   when: upgrade
   tags: upgrade
 
 # Run final upgrade tasks 1 week after upgrading database
 - name: final upgrade tasks
-  include: upgrade_final_{{ oracle_install_type }}.yml
+  include: upgrade_final.yml
   when: upgrade_final
   tags: upgrade_final
