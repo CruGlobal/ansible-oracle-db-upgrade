@@ -50,7 +50,7 @@
 - name: final upgrade backup (level 0)
   shell: rman @{{ oracle_stage }}/final_upgrade_backup_0.rman
   environment: "{{ env }}"
-  async: 7200
+  async: 14400
   poll: 10
   when: master_node and database_parameters[db_name].log_mode == 'archivelog'
   tags: final_upgrade_backup

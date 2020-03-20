@@ -26,7 +26,8 @@ PROMP Databases Users with incompatible 10G passwords
 select USERNAME
 from DBA_USERS
 where ( PASSWORD_VERSIONS = '10G 'or PASSWORD_VERSIONS = '10G HTTP ')
-and USERNAME <> 'ANONYMOUS';
+and USERNAME <> 'ANONYMOUS'
+ORDER BY USERNAME;
 
 PROMP Check SYS and System default tablespace
 SELECT username, default_tablespace FROM dba_users WHERE username in ('SYS','SYSTEM');
