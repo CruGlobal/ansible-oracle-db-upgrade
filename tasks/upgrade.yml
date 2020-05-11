@@ -205,6 +205,7 @@
   environment: "{{ env }}"
   register: sqlplus_result
   failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+  when: master_node
 
 - name: Show database service configuration
   shell: "srvctl config service -d {{ db_name }} -s {{ db_name }}app"
