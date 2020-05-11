@@ -200,6 +200,13 @@
 
   when: master_node and oracle_install_type == 'rac'
 
+- name: Disable Optimizer Adaptive Plans
+  shell: echo "alter system set optimizer_adaptive_plans=false scope=both;" | sqlplus / as sysdba
+  environment: "{{ env }}"
+  register: sqlplus_result
+  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+  when: master_node
+
 - name: Show database service configuration
   shell: "srvctl config service -d {{ db_name }} -s {{ db_name }}app"
   environment: "{{ env }}"
