@@ -1,5 +1,5 @@
 ---
-#Steps to run 1 Week after upgrading Database
+# steps to run 1 Week after upgrading Database
 - name: Drop restore point and set compatible parameter
   shell: echo "{{ item }};" | sqlplus / as sysdba
   register: sqlplus_result
@@ -15,17 +15,32 @@
   environment: "{{ env }}"
   when: master_node
 
-- name: Disable Archivelog Mode
-  shell: echo "{{ item }};" | sqlplus / as sysdba
-  register: sqlplus_result
-  failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
-  environment: "{{ env }}"
+- block:
+    # existing glogin.sql causes issues with sqlplus shell tasks
+    - name: Rename glogin.sql in {{ oracle_version }} DB Home.
+      shell: "mv glogin.sql upg_glogin.sql"
+      args:
+        chdir: "{{ oracle_home }}/sqlplus/admin"
+        creates: upg_glogin.sql
+
+    - name: Disable Archivelog Mode
+      shell: echo "{{ item }};" | sqlplus / as sysdba
+      register: sqlplus_result
+      failed_when: "'ERROR' in sqlplus_result.stdout or sqlplus_result.rc != 0"
+      environment: "{{ env }}"
+      with_items:
+        - startup mount
+        - alter database flashback off
+        - alter database noarchivelog
+        - shutdown immediate
+
+    - name: Restore glogin.sql
+      shell: "mv upg_glogin.sql glogin.sql"
+      args:
+        chdir: "{{ oracle_home }}/sqlplus/admin"
+        creates: glogin.sql
+
   when: master_node and database_parameters[db_name].log_mode == 'noarchivelog'
-  with_items:
-    - startup mount
-    - alter database flashback off
-    - alter database noarchivelog
-    - shutdown immediate
 
 - name: Start database
   shell: srvctl start database -d {{ db_name }}
@@ -39,7 +54,7 @@
   environment: "{{ env }}"
   when: master_node
 
-## Backup Database
+# Backup Database
 - name: template final upgrade backup (level 0)
   template:
     src: final_upgrade_backup_0.j2
