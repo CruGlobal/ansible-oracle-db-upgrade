@@ -9,7 +9,7 @@
 - name: Shutdown database (single instance noarchivelog)
   shell: echo "shutdown immediate;" | sqlplus / as sysdba
   environment: "{{ env_old }}"
-  when: database_parameters[db_name].log_mode == 'noarchivelog' and oracle_install_type == 'si'
+  when: database_parameters[db_name].log_mode == 'noarchivelog' and oracle_install_type == 'si_asm'
   tags:
     - archivelog
 
@@ -34,6 +34,13 @@
   environment: "{{ env_old }}"
   when: database_parameters[db_name].log_mode == 'noarchivelog'
   tags: archivelog
+
+- name: Open database (single instance noarchivelog)
+  shell: echo "alter database open;" | sqlplus / as sysdba
+  environment: "{{ env_old }}"
+  when: database_parameters[db_name].log_mode == 'noarchivelog' and oracle_install_type == 'si_asm'
+  tags:
+    - archivelog
 
 - name: Startup database (rac, noarchivelog)
   shell: srvctl start database -d {{ db_name }}
@@ -61,7 +68,7 @@
 - name: backup database (level 0)
   shell: rman @{{ oracle_stage }}/pre_upgrade_backup_0.rman
   environment: "{{ env_old }}"
-  async: 7200
+  async: 14400
   poll: 10
   tags: pre_upgrade_backup
 

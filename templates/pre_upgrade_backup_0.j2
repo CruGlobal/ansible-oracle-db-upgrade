@@ -10,7 +10,7 @@ allocate channel backup_disk4 type disk;
 allocate channel backup_disk5 type disk;
 allocate channel backup_disk6 type disk;
 {% endif %}
-backup incremental level 0 cumulative tag 'before_upgrade_full' database;
+backup incremental level 0 cumulative as COMPRESSED BACKUPSET tag 'before_upgrade_full' database;
 backup current controlfile tag 'before_upgrade_full';
 release channel backup_disk1;
 release channel backup_disk2;

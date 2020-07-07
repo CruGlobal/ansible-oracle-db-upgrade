@@ -17,13 +17,24 @@
       environment: "{{ env_old }}"
       tags: flashback
 
-    - name: template backup script (level 1)
+    - name: template rac backup script (level 1)
       template:
         src: pre_upgrade_backup_1.j2
         dest: "{{ oracle_stage }}/pre_upgrade_backup_1.rman"
         owner: "{{ oracle_user }}"
         group: "{{ oracle_group }}"
         mode: 0600
+      when: oracle_install_type == 'rac'
+      tags: backup
+
+    - name: template dw backup script (level 1)
+      template:
+        src: pre_upgrade_backup_1_dw.j2
+        dest: "{{ oracle_stage }}/pre_upgrade_backup_1.rman"
+        owner: "{{ oracle_user }}"
+        group: "{{ oracle_group }}"
+        mode: 0600
+      when: oracle_install_type == 'si_asm'
       tags: backup
 
     - name: backup database (level 1)
