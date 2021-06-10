@@ -1,6 +1,10 @@
 Ansible Oracle DB Upgrade Role
 =========
 
+## Notice
+As of Jun 10, 2021 this repository has been archived and will no longer be developed or monitored.
+
+
 This role will upgrade an Oracle database.  The role is is divided into 3 sections that should be run in this order:
 
 1. `pre_upgrade.yml` (no downtime if database is in archivelog mode)
